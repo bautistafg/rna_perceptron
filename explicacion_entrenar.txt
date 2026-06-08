@@ -1,0 +1,167 @@
+=============================================================================
+        EXPLICACIÓN DETALLADA DE LA FUNCIÓN entrenar()
+=============================================================================
+
+El código de la función:
+
+    def entrenar(X_train, y_train, tasa=0.1, epocas=100):
+        n_atributos = len(X_train[0])
+        pesos = [0.0] * n_atributos
+        bias = 0.0
+
+        for epoca in range(epocas):
+            errores = 0
+            for entrada, clase_real in zip(X_train, y_train):
+                prediccion = predecir(pesos, bias, entrada)
+                error = clase_real - prediccion
+                if error != 0:
+                    errores += 1
+                    for i in range(len(pesos)):
+                        pesos[i] += tasa * error * entrada[i]
+                    bias += tasa * error
+
+            print(f"Época {epoca + 1}: {errores} errores")
+
+            if errores == 0:
+                print(f"Convergió en época {epoca + 1}")
+                break
+
+        return pesos, bias
+
+
+-----------------------------------------------------------------------------
+1) ¿QUÉ ES Y QUÉ DEVUELVE?
+-----------------------------------------------------------------------------
+Es el corazón del perceptrón: AJUSTA los pesos y el bias para que el modelo
+aprenda a separar las dos clases (fire / not fire).
+
+Devuelve dos cosas:
+  - pesos : una lista de números, un peso por cada atributo de entrada.
+  - bias  : un solo número (el "sesgo" o umbral).
+
+Juntos, pesos + bias definen la FRONTERA DE DECISIÓN: la línea que separa
+los ejemplos que el perceptrón clasifica como 1 de los que clasifica como 0.
+
+
+-----------------------------------------------------------------------------
+2) LOS PARÁMETROS DE ENTRADA
+-----------------------------------------------------------------------------
+  X_train : datos de entrenamiento ya normalizados (lista de filas).
+            Ej: [[0.6, 0.4, 0.43, 0.0],
+                 [0.0, 1.0, 1.0, 0.8], ...]
+  y_train : la clase real de cada fila (0 o 1).
+            Ej: [0, 1, 1, 0, ...]
+  tasa    : tasa de aprendizaje (learning rate). Controla cuánto se mueven
+            los pesos en cada corrección. Valor por defecto 0.1.
+  epocas  : cuántas veces como máximo se recorren TODOS los datos. Por
+            defecto 100.
+
+
+-----------------------------------------------------------------------------
+3) INICIALIZACIÓN (antes de aprender)
+-----------------------------------------------------------------------------
+    n_atributos = len(X_train[0])    # cuántas columnas/atributos hay
+    pesos = [0.0] * n_atributos      # un peso en 0 por cada atributo
+    bias = 0.0                       # sesgo arranca en 0
+
+Si hay 4 atributos:
+    pesos = [0.0, 0.0, 0.0, 0.0]
+    bias  = 0.0
+
+El modelo arranca "sin saber nada": todos los pesos en cero.
+
+
+-----------------------------------------------------------------------------
+4) LOS DOS BUCLES
+-----------------------------------------------------------------------------
+Bucle EXTERNO -> for epoca in range(epocas):
+    Una "época" es una pasada completa por TODOS los ejemplos.
+    Se repite hasta 'epocas' veces (o hasta que converja).
+
+Bucle INTERNO -> for entrada, clase_real in zip(X_train, y_train):
+    Recorre los ejemplos UNO POR UNO.
+    zip() empareja cada fila de X_train con su clase en y_train:
+        entrada     = X_train[k]   (los atributos del ejemplo k)
+        clase_real  = y_train[k]   (la clase verdadera de ese ejemplo)
+
+    'errores = 0' se reinicia al empezar cada época, para contar cuántos
+    ejemplos se clasificaron mal en esa pasada.
+
+
+-----------------------------------------------------------------------------
+5) EL APRENDIZAJE (lo que pasa con cada ejemplo)
+-----------------------------------------------------------------------------
+    prediccion = predecir(pesos, bias, entrada)
+        -> el perceptrón da su salida (0 o 1) con los pesos actuales.
+
+    error = clase_real - prediccion
+        Solo puede dar 3 valores:
+           0  -> acertó         (no se hace nada)
+          +1  -> era 1, dijo 0  (predijo de menos -> hay que SUBIR la suma)
+          -1  -> era 0, dijo 1  (predijo de más   -> hay que BAJAR la suma)
+
+    if error != 0:           # solo corrige cuando se equivoca
+        errores += 1
+        for i in range(len(pesos)):
+            pesos[i] += tasa * error * entrada[i]   # REGLA DE ACTUALIZACIÓN
+        bias += tasa * error
+
+    REGLA DE ACTUALIZACIÓN (regla del perceptrón):
+      nuevo_peso = peso_viejo + tasa * error * valor_del_atributo
+
+      - Si error = +1: los pesos suben (proporcional a cada atributo) para que
+        la próxima vez la suma sea mayor y tienda a predecir 1.
+      - Si error = -1: los pesos bajan, para tender a predecir 0.
+      - tasa regula el tamaño del ajuste (chico = aprende lento pero estable;
+        grande = aprende rápido pero puede oscilar).
+      - entrada[i]: el atributo que valía mucho influye más en su peso.
+
+    El bias se ajusta igual pero sin multiplicar por ningún atributo
+    (es como un atributo que siempre vale 1).
+
+
+-----------------------------------------------------------------------------
+6) FIN DE CADA ÉPOCA Y CONVERGENCIA
+-----------------------------------------------------------------------------
+    print(f"Época {epoca + 1}: {errores} errores")
+        -> informa cuántos errores hubo en esa pasada (debería ir bajando).
+
+    if errores == 0:
+        print(f"Convergió en época ...")
+        break
+        -> si en una época COMPLETA no hubo ni un error, el modelo ya
+           clasifica todo bien: no tiene sentido seguir. Se corta con break.
+
+    "Convergió" = encontró una frontera que separa perfectamente los datos.
+    Esto solo ocurre si los datos son LINEALMENTE SEPARABLES. Si no lo son,
+    nunca llega a 0 errores y termina al agotar las 'epocas'.
+
+
+-----------------------------------------------------------------------------
+7) MINI EJEMPLO PASO A PASO (1 atributo, para entender la mecánica)
+-----------------------------------------------------------------------------
+Supongamos: tasa = 0.1, un solo atributo.
+Ejemplo: entrada = [1.0], clase_real = 1
+Estado actual: pesos = [0.0], bias = 0.0
+
+  suma = bias + pesos[0]*entrada[0] = 0.0 + 0.0*1.0 = 0.0
+  prediccion = 1 (porque suma >= 0)   ... casualmente acierta
+  error = 1 - 1 = 0  -> no corrige
+
+Otro ejemplo: entrada = [1.0], clase_real = 0, pesos = [0.5], bias = 0.2
+  suma = 0.2 + 0.5*1.0 = 0.7  ->  prediccion = 1
+  error = 0 - 1 = -1  (se equivocó)
+  pesos[0] = 0.5 + 0.1*(-1)*1.0 = 0.4   (bajó)
+  bias     = 0.2 + 0.1*(-1)     = 0.1   (bajó)
+  -> la próxima vez la suma será menor, acercándose a predecir 0.
+
+Así, ejemplo a ejemplo y época a época, los pesos se van acomodando.
+
+
+-----------------------------------------------------------------------------
+RESUMEN EN UNA FRASE
+-----------------------------------------------------------------------------
+entrenar() recorre los datos muchas veces; cada vez que el perceptrón se
+equivoca, empuja un poco los pesos y el bias en la dirección correcta, hasta
+que clasifica todo bien (converge) o se acaban las épocas.
+=============================================================================
